@@ -97,7 +97,6 @@ export class Renderer<T> {
     callback: grpc.requestCallback<any>
   ) {
     const { name, props } = call.request;
-    console.log(call.request);
 
     if (!this._registry[name]) {
       const issue = `Name "${name}" not registered`;
@@ -110,7 +109,7 @@ export class Renderer<T> {
     }
 
     try {
-      const content = this._renderMethod(name, props);
+      const content = this._renderMethod(this._registry[name], props);
 
       this._log(
         LogLevel.DEBUG,
