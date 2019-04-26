@@ -89,47 +89,45 @@ export class Renderer<T> {
   }
 
   /**
-   * Render streamed requests
+   * Render request
    *
-   * @param call Duplex streaming GRPC call
    */
-  private _render(call: grpc.ClientDuplexStream<any, any>) {
-    call.on("data", ({ request_key, name, props }) => {
-      if (!this._registry[name]) {
-        this._log(LogLevel.WARNING, `Name "${name}" not registered`);
-        return call.write({
-          request_key,
-          content: null
-        });
-      }
+  private _render(
+    call: grpc.ServerUnaryCall<any>,
+    callback: grpc.requestCallback<any>
+  ) {
+    const { name, props } = call.request;
+    console.log(call.request);
 
-      try {
-        const content = this._renderMethod(name, props);
+    if (!this._registry[name]) {
+      const issue = `Name "${name}" not registered`;
+      this._log(LogLevel.ERROR, issue);
+      callback({
+        name: "ERROR",
+        code: grpc.status.INVALID_ARGUMENT,
+        message: issue
+      });
+    }
 
-        this._log(
-          LogLevel.DEBUG,
-          `Rendered ${name} (${request_key}) with props ${JSON.stringify(
-            props
-          )}`
-        );
+    try {
+      const content = this._renderMethod(name, props);
 
-        call.write({
-          request_key,
-          content
-        });
-      } catch (e) {
-        this._log(LogLevel.ERROR, e.message);
-        call.write({
-          request_key,
-          content: null
-        });
-      }
-    });
+      this._log(
+        LogLevel.DEBUG,
+        `Rendered ${name} with props ${JSON.stringify(props)}`
+      );
 
-    call.on("end", () => {
-      this._log(LogLevel.INFO, "Closed connection");
-      call.end();
-    });
+      return callback(null, {
+        content
+      });
+    } catch (e) {
+      this._log(LogLevel.ERROR, e.message);
+      return callback({
+        name: "ERROR",
+        code: grpc.status.UNKNOWN,
+        message: e.message
+      });
+    }
   }
 
   /**
