@@ -96,10 +96,12 @@ export class Renderer<T> {
     call: grpc.ServerUnaryCall<any>,
     callback: grpc.requestCallback<any>
   ) {
-    const { name, props } = call.request;
+    const { name, props: jsonProps } = call.request;
+    const props = JSON.parse(jsonProps);
 
     if (!this._registry[name]) {
       const issue = `Name "${name}" not registered`;
+      ``;
       this._log(LogLevel.ERROR, issue);
       callback({
         name: "ERROR",
